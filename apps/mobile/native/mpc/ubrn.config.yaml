@@ -1,0 +1,9 @@
+# uniffi-bindgen-react-native: genera el Turbo Module "hw-mpc" para iOS (xcframework) y Android (.so)
+name: hw-mpc
+rust:
+  directory: .
+  manifestPath: Cargo.toml
+ios:
+  frameworkName: HwMpc
+android:
+  packageName: com.example.hybridwallet.mpc

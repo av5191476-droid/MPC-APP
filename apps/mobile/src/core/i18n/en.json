@@ -1,0 +1,6 @@
+{
+  "welcome": { "title": "Your digital money, no words to write down", "body": "Sign in with Face ID or your fingerprint. Nobody, not even us, can move your money without you.", "create": "Create wallet", "recover": "I already have a wallet" },
+  "tabs": { "home": "Home", "activity": "Activity", "security": "Security", "connections": "Connections" },
+  "home": { "send": "Send", "receive": "Receive", "limits": "Limits", "copied": "Address copied", "empty": "No funds yet. Share your address to receive." },
+  "errors": { "network": "Can't reach the server. You can still send under your limit.", "generic": "Something went wrong. Try again." }
+}

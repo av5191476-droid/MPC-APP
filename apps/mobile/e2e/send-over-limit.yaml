@@ -1,0 +1,16 @@
+# T062 + escenario 5/6 del quickstart: sobre el límite sin código falla on-chain; con código pasa.
+appId: com.example.hybridwallet
+---
+- launchApp
+- tapOn: "Enviar"
+- tapOn: "Para"
+- inputText: "0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063"
+- tapOn: "Monto"
+- inputText: "250"
+- tapOn: "Revisar envío"
+- assertVisible: "Supera tu límite diario"
+- tapOn: "Continuar"
+- assertVisible: "Confirma que eres tú"
+- inputText: ${OTP_STAGING}
+- tapOn: "Verificar y confirmar"
+- extendedWaitUntil: { visible: "Enviado", timeout: 30000 }

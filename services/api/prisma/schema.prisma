@@ -1,0 +1,183 @@
+// T014 — data-model.md. Ninguna tabla guarda material de llave (partes, privadas, salida PRF).
+generator client { provider = "prisma-client-js" }
+datasource db { provider = "postgresql" url = env("DATABASE_URL") }
+
+enum UserStatus { active locked recovering closed }
+enum PasskeyStatus { active revoked }
+enum ShareRole { device server backup }
+enum ShareStatus { active superseded revoked }
+enum ChainStatus { pending active }
+enum GuardianType { address passkey service }
+enum RecoveryMethod { reshare_backup guardians sweep }
+enum RecoveryStatus { initiated verifying timelocked executed cancelled failed }
+enum SessionKeyStatus { active revoked expired }
+enum UserOpKind { transfer admin dapp recovery }
+enum Sponsorship { sponsored erc20 self }
+enum UserOpStatus { built signed submitted included failed dropped }
+
+model User {
+  id              String    @id @default(uuid()) @db.Uuid
+  email           String?   @unique @db.Citext
+  emailVerifiedAt DateTime?
+  phone           String?
+  country         String    @default("CO") @db.Char(2)
+  locale          String    @default("es-CO")
+  status          UserStatus @default(active)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  passkeys        Passkey[]
+  accounts        SmartAccount[]
+  refreshTokens   RefreshToken[]
+  pushTokens      PushToken[]
+}
+
+model Passkey {
+  id                  String        @id @default(uuid()) @db.Uuid
+  userId              String        @db.Uuid
+  user                User          @relation(fields: [userId], references: [id])
+  credentialId        Bytes         @unique
+  publicKeyX          Bytes
+  publicKeyY          Bytes
+  signCount           BigInt        @default(0)
+  transports          String[]
+  backedUp            Boolean       // flag BS
+  prfSupported        Boolean
+  status              PasskeyStatus @default(active)
+  onchainRegisteredAt DateTime?
+  createdAt           DateTime      @default(now())
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id])
+  hash      Bytes    @unique  // sha256 del token; el token nunca se guarda
+  family    String   @db.Uuid // rotación: reusar un token revoca toda la familia
+  expiresAt DateTime
+  usedAt    DateTime?
+}
+
+model SmartAccount {
+  id             String           @id @default(uuid()) @db.Uuid
+  userId         String           @db.Uuid
+  user           User             @relation(fields: [userId], references: [id])
+  address        Bytes            @unique
+  mpcPublicKey   Bytes
+  implementation Bytes
+  createdAt      DateTime         @default(now())
+  shares         KeyShareRecord[]
+  chains         AccountChain[]
+  policies       Policy[]
+  allowlist      AllowlistEntry[]
+  guardians      Guardian[]
+  recoveries     RecoveryRequest[]
+  sessionKeys    SessionKey[]
+  userOps        UserOpRecord[]
+}
+
+model KeyShareRecord {
+  id               String      @id @default(uuid()) @db.Uuid
+  accountId        String      @db.Uuid
+  account          SmartAccount @relation(fields: [accountId], references: [id])
+  role             ShareRole
+  epoch            Int
+  publicCommitment Bytes
+  enclaveBlobRef   String?
+  status           ShareStatus @default(active)
+  createdAt        DateTime    @default(now())
+  @@index([accountId, status])
+}
+
+model AccountChain {
+  accountId      String       @db.Uuid
+  account        SmartAccount @relation(fields: [accountId], references: [id])
+  chainId        Int
+  delegatedAt    DateTime?
+  modulesVersion String
+  status         ChainStatus  @default(pending)
+  @@id([accountId, chainId])
+}
+
+model Policy {
+  accountId            String       @db.Uuid
+  account              SmartAccount @relation(fields: [accountId], references: [id])
+  chainId              Int
+  token                Bytes
+  periodSeconds        Int          @default(86400)
+  limitAmount          Decimal      @db.Decimal(78, 0)
+  allowlistLimitAmount Decimal      @default(0) @db.Decimal(78, 0)
+  pendingChange        Json?
+  @@id([accountId, chainId, token])
+}
+
+model AllowlistEntry {
+  accountId   String       @db.Uuid
+  account     SmartAccount @relation(fields: [accountId], references: [id])
+  address     Bytes
+  label       String
+  addedAt     DateTime     @default(now())
+  effectiveAt DateTime
+  @@id([accountId, address])
+}
+
+model Guardian {
+  id         String       @id @default(uuid()) @db.Uuid
+  accountId  String       @db.Uuid
+  account    SmartAccount @relation(fields: [accountId], references: [id])
+  type       GuardianType
+  identifier String
+  label      String
+  weight     Int          @default(1)
+  status     String       @default("active")
+}
+
+model RecoveryRequest {
+  id                   String         @id @default(uuid()) @db.Uuid
+  accountId            String         @db.Uuid
+  account              SmartAccount   @relation(fields: [accountId], references: [id])
+  method               RecoveryMethod
+  status               RecoveryStatus @default(initiated)
+  initiatedAt          DateTime       @default(now())
+  timelockEndsAt       DateTime?
+  closedAt             DateTime?
+  newAddress           Bytes?
+  newDeviceAttestation Json?
+}
+
+model SessionKey {
+  id          String           @id @default(uuid()) @db.Uuid
+  accountId   String           @db.Uuid
+  account     SmartAccount     @relation(fields: [accountId], references: [id])
+  chainId     Int
+  dappOrigin  String
+  publicKey   Bytes
+  permissions Json
+  validUntil  DateTime
+  status      SessionKeyStatus @default(active)
+}
+
+model UserOpRecord {
+  userOpHash  Bytes        @id
+  accountId   String       @db.Uuid
+  account     SmartAccount @relation(fields: [accountId], references: [id])
+  chainId     Int
+  kind        UserOpKind
+  asset       Bytes?
+  amount      Decimal?     @db.Decimal(78, 0)
+  to          Bytes?
+  sponsorship Sponsorship
+  signers     String[]
+  status      UserOpStatus @default(built)
+  txHash      Bytes?
+  revertReason String?
+  blockNumber BigInt?
+  createdAt   DateTime     @default(now())
+  @@index([accountId, createdAt])
+}
+
+model PushToken {
+  token    String @id
+  userId   String @db.Uuid
+  user     User   @relation(fields: [userId], references: [id])
+  platform String
+}

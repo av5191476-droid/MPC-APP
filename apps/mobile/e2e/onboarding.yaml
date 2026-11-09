@@ -1,0 +1,14 @@
+# T045: alta en < 60 s en iOS 16+ y Android 9+ (requiere dispositivo físico con biometría
+# y backend de staging). Maestro: maestro test e2e/onboarding.yaml
+appId: com.example.hybridwallet
+---
+- launchApp: { clearState: true }
+- assertVisible: "Crear billetera"
+- tapOn: "Crear billetera"
+- runFlow:
+    when: { platform: iOS }
+    commands:
+      - tapOn: { text: "Continuar", optional: true }  # hoja nativa de passkey
+- extendedWaitUntil: { visible: "Tu dirección está lista", timeout: 60000 }
+- tapOn: "Guardar respaldo en iCloud"
+- extendedWaitUntil: { visible: "Inicio", timeout: 30000 }

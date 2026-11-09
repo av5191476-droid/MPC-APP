@@ -1,0 +1,983 @@
+<!doctype html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Billetera híbrida: recorrido interactivo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#E9ECE6; --surface:#FFFFFF; --sunk:#F3F5F1; --ink:#15212A; --muted:#56666E; --line:#CDD4CE;
+  --pk:#0F7B6C; --d:#2C55B0; --s:#A86A12; --b:#74489F; --bad:#BD2F45; --good:#0F7B6C;
+  --phone:#0F1A20;
+  --sans:"Schibsted Grotesk",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,monospace;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0D1418; --surface:#151F25; --sunk:#1B262D; --ink:#E3EAEC; --muted:#93A3AA; --line:#2A3740;
+    --pk:#3DBBA6; --d:#7B9EF0; --s:#E0A64B; --b:#B48BE0; --bad:#F06A7E; --good:#3DBBA6; --phone:#05090B;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0D1418; --surface:#151F25; --sunk:#1B262D; --ink:#E3EAEC; --muted:#93A3AA; --line:#2A3740;
+  --pk:#3DBBA6; --d:#7B9EF0; --s:#E0A64B; --b:#B48BE0; --bad:#F06A7E; --good:#3DBBA6; --phone:#05090B;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:inherit}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--paper);color:var(--ink);font:400 15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--d);outline-offset:2px;border-radius:6px}
+.mono{font-family:var(--mono);font-size:.86em;letter-spacing:-.01em}
+
+/* ───────── Encabezado ───────── */
+.top{max-width:1240px;margin:0 auto;padding:28px 24px 8px;display:grid;grid-template-columns:1fr auto;gap:16px 32px;align-items:end}
+.top h1{margin:0;font-weight:800;font-size:clamp(28px,3.6vw,44px);line-height:1.02;letter-spacing:-.03em;max-width:16ch}
+.top p{margin:10px 0 0;color:var(--muted);max-width:58ch}
+.controls{display:flex;flex-wrap:wrap;gap:8px;justify-content:flex-end;max-width:520px}
+.ctl{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-size:13.5px;font-weight:500;display:inline-flex;gap:8px;align-items:center}
+.ctl[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.ctl .dot{width:8px;height:8px;border-radius:50%;background:var(--good)}
+.ctl[aria-pressed="true"] .dot{background:var(--bad)}
+.clock{font-size:13px;color:var(--muted);text-align:right;grid-column:2}
+
+/* ───────── Escenario ───────── */
+.stage{max-width:1240px;margin:0 auto;padding:16px 24px 48px;display:grid;grid-template-columns:400px 1fr;gap:40px;align-items:start}
+@media (max-width:980px){.stage{grid-template-columns:1fr}.top{grid-template-columns:1fr}.controls{justify-content:flex-start}.clock{grid-column:1;text-align:left}}
+
+/* ───────── Teléfono ───────── */
+.device{position:sticky;top:16px;justify-self:center;width:100%;max-width:392px}
+.frame{background:var(--phone);border-radius:52px;padding:12px;box-shadow:0 30px 60px -30px rgba(10,20,25,.55)}
+.screen{position:relative;height:760px;max-height:calc(100vh - 80px);min-height:620px;border-radius:40px;overflow:hidden;background:var(--surface);display:flex;flex-direction:column}
+@media (max-width:980px){.device{position:static}.screen{max-height:none}}
+.status{display:flex;justify-content:space-between;padding:14px 28px 6px;font-size:13px;font-weight:600}
+.island{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:110px;height:30px;background:var(--phone);border-radius:20px}
+.view{flex:1;overflow:auto;padding:12px 22px 20px;display:flex;flex-direction:column}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--surface);padding:8px 6px 14px}
+.tabs button{background:none;border:0;padding:6px 0;font-size:11.5px;font-weight:600;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:3px}
+.tabs button[aria-current="page"]{color:var(--ink)}
+.tabs svg{width:22px;height:22px}
+
+h2.t{font-size:26px;line-height:1.1;letter-spacing:-.02em;margin:18px 0 6px;font-weight:700}
+.sub{color:var(--muted);margin:0 0 18px;font-size:14.5px}
+.btn{display:block;width:100%;border:0;border-radius:16px;padding:15px 18px;font-weight:600;font-size:16px;background:var(--ink);color:var(--surface);min-height:52px}
+.btn.alt{background:var(--sunk);color:var(--ink)}
+.btn.link{background:none;color:var(--d);padding:10px;min-height:44px;font-weight:600}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.stack{display:flex;flex-direction:column;gap:10px}
+.grow{flex:1}
+.back{background:none;border:0;padding:8px 0;font-weight:600;color:var(--muted);align-self:flex-start;min-height:44px}
+
+.balance{margin:18px 0 4px;font-size:44px;font-weight:700;letter-spacing:-.035em;line-height:1}
+.balance small{font-size:18px;color:var(--muted);font-weight:500;letter-spacing:0}
+.addr{display:inline-flex;align-items:center;gap:8px;background:var(--sunk);border-radius:999px;padding:6px 12px;font-size:13px;margin-top:10px}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:20px 0}
+.actions button{border:1px solid var(--line);background:var(--surface);border-radius:18px;padding:14px 6px;font-weight:600;font-size:14px;display:flex;flex-direction:column;align-items:center;gap:6px;min-height:76px}
+.actions svg{width:22px;height:22px}
+.rows{border-top:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+.row .k{color:var(--muted);font-size:14px}
+.row .v{font-weight:600;text-align:right}
+.chip{display:inline-block;font-size:12px;font-weight:600;padding:2px 9px;border-radius:999px;background:var(--sunk);color:var(--muted)}
+.chip.on{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+.chip.warn{background:color-mix(in srgb,var(--s) 18%,transparent);color:var(--s)}
+.chip.bad{background:color-mix(in srgb,var(--bad) 16%,transparent);color:var(--bad)}
+.note{border-radius:14px;padding:12px 14px;background:var(--sunk);font-size:14px;margin:10px 0}
+.note.warn{background:color-mix(in srgb,var(--s) 14%,var(--surface))}
+.note.bad{background:color-mix(in srgb,var(--bad) 12%,var(--surface))}
+.note b{display:block;margin-bottom:2px}
+label.f{display:block;font-size:13px;font-weight:600;color:var(--muted);margin:14px 0 6px}
+.input{width:100%;border:1px solid var(--line);background:var(--surface);border-radius:14px;padding:13px 14px;font-size:16px;min-height:50px}
+.input:focus{outline:2px solid var(--d);border-color:transparent}
+.err{color:var(--bad);font-size:13px;margin-top:6px;min-height:1em}
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:13.5px;font-weight:600;min-height:38px}
+.seg button[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.big-amount{font-size:40px;font-weight:700;letter-spacing:-.03em;border:0;background:none;width:100%;padding:6px 0}
+.big-amount:focus{outline:none}
+.meter{height:10px;border-radius:6px;background:var(--sunk);overflow:hidden;margin:10px 0 6px}
+.meter i{display:block;height:100%;background:var(--pk);border-radius:6px;transition:width .4s}
+.otp{letter-spacing:.5em;text-align:center;font-family:var(--mono);font-size:24px}
+.steps{list-style:none;margin:18px 0;padding:0;position:relative}
+.steps li{position:relative;padding:0 0 18px 30px;font-size:15px}
+.steps li::before{content:"";position:absolute;left:6px;top:5px;width:12px;height:12px;border-radius:50%;border:2px solid var(--line);background:var(--surface)}
+.steps li::after{content:"";position:absolute;left:12px;top:19px;bottom:-1px;width:2px;background:var(--line)}
+.steps li:last-child::after{display:none}
+.steps li.done::before{background:var(--good);border-color:var(--good)}
+.steps li.fail::before{background:var(--bad);border-color:var(--bad)}
+.steps li.run::before{border-color:var(--d);animation:pulse 1s infinite}
+.steps li span{display:block;color:var(--muted);font-size:13px}
+@keyframes pulse{50%{box-shadow:0 0 0 5px color-mix(in srgb,var(--d) 25%,transparent)}}
+.qr{width:200px;height:200px;margin:16px auto 8px;display:block;background:#fff;border-radius:16px;padding:12px}
+.list-empty{color:var(--muted);text-align:center;padding:30px 10px}
+
+/* hoja de Face ID */
+.sheet-wrap{position:absolute;inset:0;background:rgba(5,10,12,.45);display:flex;align-items:flex-end;z-index:5}
+.sheet{background:var(--surface);width:100%;border-radius:28px 28px 0 0;padding:22px 22px 30px;text-align:center}
+.sheet h3{margin:8px 0 4px;font-size:19px}
+.sheet p{margin:0 0 18px;color:var(--muted);font-size:14px}
+.face{width:64px;height:64px;margin:4px auto;color:var(--pk)}
+.face.scan path{stroke-dasharray:4 3;animation:dash 1s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-14}}
+.toast{position:absolute;left:10px;right:10px;top:48px;z-index:6;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);border:1px solid var(--line);border-radius:18px;padding:11px 14px;font-size:13.5px;box-shadow:0 10px 30px -12px rgba(0,0,0,.35);transform:translateY(-140%);transition:transform .35s ease}
+.toast.show{transform:none}
+.toast b{display:block;font-size:13px}
+
+/* ───────── Mesa de firma ───────── */
+.desk{min-width:0}
+.desk h2{font-size:22px;letter-spacing:-.02em;margin:0 0 4px}
+.desk .lead{color:var(--muted);margin:0 0 18px;max-width:62ch}
+.keys{display:grid;grid-template-columns:minmax(0,1.05fr) minmax(0,1fr);gap:28px;align-items:start}
+@media (max-width:1180px){.keys{grid-template-columns:1fr}}
+.tri{width:100%;max-width:440px;height:auto;display:block}
+.tri .edge{stroke:var(--line);stroke-width:3;fill:none;transition:stroke .3s,stroke-width .3s}
+.tri .edge.on{stroke:var(--ink);stroke-width:5}
+.tri .node circle.ring{fill:var(--surface);stroke-width:3;transition:opacity .3s}
+.tri .node text{fill:var(--ink);font-family:var(--sans);font-size:14px;font-weight:700;text-anchor:middle}
+.tri .node text.s{font-weight:500;font-size:12px;fill:var(--muted)}
+.tri .node.off circle.ring{stroke-dasharray:5 5;opacity:.6}
+.tri .node.dead circle.ring{opacity:.35}
+.tri .node .x{stroke:var(--bad);stroke-width:4;display:none}
+.tri .node.dead .x{display:block}
+.tri .node.signing circle.ring{stroke-width:6}
+.tri .center{font-size:12px;fill:var(--muted);text-anchor:middle;font-family:var(--sans)}
+.legend{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:12px}
+.legend li{display:grid;grid-template-columns:14px 1fr auto;gap:10px;align-items:start;font-size:14px}
+.legend .sw{width:14px;height:14px;border-radius:50%;margin-top:3px}
+.legend b{display:block;font-size:14px}
+.legend span{color:var(--muted);font-size:13px}
+.legend em{font-style:normal;font-size:12px;font-weight:600;white-space:nowrap}
+
+.op{margin-top:26px;border-top:2px solid var(--ink);padding-top:14px}
+.op-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;align-items:baseline}
+.op-head h3{margin:0;font-size:18px}
+.op-head .mono{color:var(--muted)}
+.checks{list-style:none;margin:10px 0 0;padding:0}
+.checks li{display:grid;grid-template-columns:22px minmax(0,1fr);gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:14.5px}
+.checks li:last-child{border-bottom:0}
+.checks .ic{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:var(--surface);margin-top:1px}
+.checks .ok .ic{background:var(--good)}
+.checks .fail .ic{background:var(--bad)}
+.checks .skip .ic{background:var(--muted)}
+.checks .run .ic{background:var(--d);animation:pulse 1s infinite}
+.checks small{display:block;color:var(--muted);font-size:13px}
+.checks .who{display:inline-flex;gap:4px;margin-left:6px;vertical-align:1px}
+.checks .who i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.idle{color:var(--muted);font-size:14px;margin:10px 0}
+
+details.log{margin-top:24px}
+details.log summary{cursor:pointer;font-weight:600;min-height:44px;display:flex;align-items:center}
+.log ol{list-style:none;margin:0;padding:0;max-height:260px;overflow:auto;border:1px solid var(--line);border-radius:12px;background:var(--surface)}
+.log li{padding:8px 12px;border-bottom:1px solid var(--line);font-size:13px;display:grid;grid-template-columns:62px 1fr;gap:8px}
+.log li:last-child{border-bottom:0}
+.log time{color:var(--muted);font-family:var(--mono);font-size:12px}
+.foot{max-width:1240px;margin:0 auto;padding:0 24px 40px;color:var(--muted);font-size:13px}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div>
+    <h1>Tu billetera, firmada por tres llaves que nunca se juntan</h1>
+    <p>Recorre la app como lo haría un usuario. A la derecha ves en tiempo real qué llaves firman cada operación y qué revisa el contrato en la cadena.</p>
+  </div>
+  <div class="controls" role="group" aria-label="Simular condiciones">
+    <button class="ctl" id="c-server" aria-pressed="false"><span class="dot"></span>Servidor caído</button>
+    <button class="ctl" id="c-quota" aria-pressed="false"><span class="dot"></span>Patrocinio agotado</button>
+    <button class="ctl" id="c-time">Avanzar 24 h</button>
+    <button class="ctl" id="c-lose">Perder el teléfono</button>
+    <button class="ctl" id="c-reset">Empezar de nuevo</button>
+  </div>
+  <div class="clock" id="clock" aria-live="polite"></div>
+</header>
+
+<main class="stage">
+  <div class="device">
+    <div class="frame">
+      <div class="screen" id="screen">
+        <div class="island" aria-hidden="true"></div>
+        <div class="status" aria-hidden="true"><span id="st-time">9:41</span><span>5G</span></div>
+        <div class="toast" id="toast" role="status" aria-live="polite"></div>
+        <div class="view" id="view"></div>
+        <nav class="tabs" id="tabs" aria-label="Secciones de la app" hidden></nav>
+        <div id="overlay"></div>
+      </div>
+    </div>
+  </div>
+
+  <section class="desk" aria-label="Mesa de firma">
+    <h2>Mesa de firma</h2>
+    <p class="lead">La llave de la cuenta se reparte en tres partes. Cualquier par puede firmar; ninguna sola puede. La llave de acceso del teléfono firma lo cotidiano y el contrato pone los límites.</p>
+
+    <div class="keys">
+      <svg class="tri" viewBox="0 0 420 300" role="img" aria-labelledby="tri-t">
+        <title id="tri-t">Triángulo de las tres partes de la llave MPC</title>
+        <line class="edge" id="e-DS" x1="80" y1="232" x2="340" y2="232"/>
+        <line class="edge" id="e-DB" x1="80" y1="232" x2="210" y2="62"/>
+        <line class="edge" id="e-BS" x1="210" y1="62" x2="340" y2="232"/>
+        <text class="center" x="210" y="190" id="epoch">sin llave aún</text>
+        <g class="node off" id="n-B" transform="translate(210 62)">
+          <circle class="ring" r="34" stroke="var(--b)"/>
+          <text y="5">B</text>
+          <line class="x" x1="-22" y1="-22" x2="22" y2="22"/><line class="x" x1="22" y1="-22" x2="-22" y2="22"/>
+          <text class="s" y="-46" id="n-B-s">Respaldo</text>
+        </g>
+        <g class="node off" id="n-D" transform="translate(80 232)">
+          <circle class="ring" r="34" stroke="var(--d)"/>
+          <text y="5">D</text>
+          <line class="x" x1="-22" y1="-22" x2="22" y2="22"/><line class="x" x1="22" y1="-22" x2="-22" y2="22"/>
+          <text class="s" y="56" id="n-D-s">Teléfono</text>
+        </g>
+        <g class="node off" id="n-S" transform="translate(340 232)">
+          <circle class="ring" r="34" stroke="var(--s)"/>
+          <text y="5">S</text>
+          <line class="x" x1="-22" y1="-22" x2="22" y2="22"/><line class="x" x1="22" y1="-22" x2="-22" y2="22"/>
+          <text class="s" y="56" id="n-S-s">Servidor</text>
+        </g>
+        <g class="node off" id="n-P" transform="translate(28 150)">
+          <circle class="ring" r="20" stroke="var(--pk)"/>
+          <text y="4" style="font-size:11px">P</text>
+        </g>
+      </svg>
+
+      <ul class="legend" id="legend"></ul>
+    </div>
+
+    <div class="op" id="op">
+      <div class="op-head"><h3 id="op-title">Aún no hay operaciones</h3><span class="mono" id="op-hash"></span></div>
+      <p class="idle" id="op-idle">Crea la billetera en el teléfono para empezar.</p>
+      <ul class="checks" id="checks"></ul>
+    </div>
+
+    <details class="log" open>
+      <summary>Registro de eventos</summary>
+      <ol id="log"></ol>
+    </details>
+  </section>
+</main>
+
+<p class="foot">Simulación con datos de ejemplo en Base Sepolia. No mueve fondos reales; la tasa COP es ilustrativa (1 USD ≈ COP 4.000).</p>
+
+<script>
+(() => {
+'use strict';
+const RM = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const wait = ms => new Promise(r => setTimeout(r, RM ? Math.min(ms, 60) : ms));
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hex = n => '0x' + Array.from(crypto.getRandomValues(new Uint8Array(n)), b => b.toString(16).padStart(2,'0')).join('');
+const short = a => a ? a.slice(0,6) + '…' + a.slice(-4) : '';
+const nf = new Intl.NumberFormat('es-CO', {minimumFractionDigits:2, maximumFractionDigits:2});
+const nf0 = new Intl.NumberFormat('es-CO', {maximumFractionDigits:0});
+const usd = n => nf.format(n);
+const COP = 4000;
+const USDC_ADDR = '0x036CbD53842c5426634e7929541eC2318f3dCF7e';
+const ANA = '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063';
+const CHAINS = { base:{name:'Base', id:8453}, arbitrum:{name:'Arbitrum', id:42161}, polygon:{name:'Polygon', id:137} };
+const DAY = 86400000;
+
+const fresh = () => ({
+  screen:'welcome', tab:'home', created:false, address:null, epoch:0,
+  shares:{ D:'none', S:'none', B:'none', P:'none' },
+  backup:false, server:true, quota:true, offset:0,
+  bal:{ base:0, arbitrum:0, polygon:0 }, chains:{ base:true, arbitrum:false, polygon:false },
+  limit:{ amount:200, spent:0, windowStart:0 }, pending:null,
+  activity:[], session:null, recovery:null, lost:false,
+  draft:{ to:'', amount:'', chain:'base', err:{} },
+  last:null, otp:null, emergencyTo:''
+});
+let S = fresh();
+let logItems = [];
+const now = () => Date.now() + S.offset;
+
+/* ───────── Registro y mesa ───────── */
+function log(text){
+  const d = new Date(now());
+  logItems.unshift({ t: d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'}), text });
+  logItems = logItems.slice(0, 60);
+  $('#log').innerHTML = logItems.map(l => `<li><time>${l.t}</time><span>${l.text}</span></li>`).join('');
+}
+
+const WHO = { P:'var(--pk)', D:'var(--d)', S:'var(--s)', B:'var(--b)' };
+let op = null;
+function opStart(title){
+  op = { title, hash: hex(32), checks: [] };
+  $('#op-idle').hidden = true;
+  $('#op-title').textContent = title;
+  $('#op-hash').textContent = 'userOpHash ' + short(op.hash);
+  renderChecks();
+}
+async function check(label, status, detail = '', who = [], ms = 420){
+  const item = { label, status:'run', detail, who };
+  op.checks.push(item); renderChecks();
+  await wait(ms);
+  item.status = status; renderChecks();
+}
+function renderChecks(){
+  const sym = { ok:'✓', fail:'✕', skip:'–', run:'' };
+  $('#checks').innerHTML = op.checks.map(c => `<li class="${c.status}"><span class="ic" aria-hidden="true">${sym[c.status]}</span><div>${esc(c.label)}${c.who.length ? `<span class="who" aria-label="Firmantes: ${c.who.join(', ')}">${c.who.map(w=>`<i style="background:${WHO[w]}"></i>`).join('')}</span>` : ''}${c.detail ? `<small>${esc(c.detail)}</small>` : ''}</div></li>`).join('');
+}
+
+function edges(on = []){
+  ['DS','DB','BS'].forEach(e => $('#e-'+e).classList.toggle('on', on.includes(e)));
+  ['D','S','B','P'].forEach(n => $('#n-'+n).classList.toggle('signing', on.some(e => e.includes(n)) || (n === 'P' && on.includes('P'))));
+}
+function renderDesk(){
+  const sh = S.shares;
+  const nodeState = { none:'off', active:'', temp:'', offline:'off', dead:'dead', lost:'dead' };
+  ['D','S','B','P'].forEach(n => {
+    const g = $('#n-'+n);
+    g.classList.remove('off','dead');
+    const st = n === 'S' && !S.server && sh.S === 'active' ? 'offline' : sh[n];
+    if (nodeState[st]) g.classList.add(nodeState[st]);
+  });
+  $('#epoch').textContent = S.created ? `época ${S.epoch}` : 'sin llave aún';
+  const label = {
+    D: { none:'Aún no existe', active:'Cifrada en el Secure Enclave; pide Face ID', dead:'Invalidada: era de una época anterior', lost:'En el teléfono perdido' },
+    S: { none:'Aún no existe', active: S.server ? 'Dentro del enclave atestado; solo co-firma si se cumplen las reglas' : 'Sin conexión: el servidor no responde', dead:'—' },
+    B: { none:'Aún no existe', temp:'Cifrada en el teléfono, falta subirla a iCloud', active:'Cifrada en tu iCloud con tu llave de acceso', dead:'—' },
+    P: { none:'Aún no existe', active:'Firma lo cotidiano (P-256, Face ID)', lost:'Sincronizada en tu iCloud' }
+  };
+  const tag = st => st === 'active' ? '<em style="color:var(--good)">activa</em>' : st === 'dead' || st === 'lost' ? '<em style="color:var(--bad)">' + (st==='lost'?'perdida':'inválida') + '</em>' : st === 'temp' ? '<em style="color:var(--s)">pendiente</em>' : '<em style="color:var(--muted)">—</em>';
+  const items = [
+    ['P','Llave de acceso', sh.P],
+    ['D','Parte del teléfono', sh.D],
+    ['S','Parte del servidor', !S.server && sh.S==='active' ? 'offline' : sh.S],
+    ['B','Parte de respaldo', sh.B],
+  ];
+  $('#legend').innerHTML = items.map(([k, name, st]) => `<li><span class="sw" style="background:${WHO[k]}"></span><div><b>${name}</b><span>${(label[k][st] ?? label[k][sh[k]] ?? '')}</span></div>${st==='offline' ? '<em style="color:var(--bad)">caído</em>' : tag(st)}</li>`).join('');
+  $('#n-D-s').textContent = 'Teléfono';
+  $('#n-B-s').textContent = 'Respaldo';
+  $('#n-S-s').textContent = 'Servidor';
+}
+
+/* ───────── Toast y overlay ───────── */
+let toastT;
+function toast(title, body){
+  const t = $('#toast');
+  t.innerHTML = `<b>${esc(title)}</b>${esc(body)}`;
+  t.classList.add('show');
+  clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 4200);
+}
+const FACE = `<svg class="face" viewBox="0 0 64 64" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M6 20V12a6 6 0 0 1 6-6h8M44 6h8a6 6 0 0 1 6 6v8M58 44v8a6 6 0 0 1-6 6h-8M20 58h-8a6 6 0 0 1-6-6v-8"/><path d="M22 24v4M42 24v4M32 26v10h-3M24 44c5 4 11 4 16 0"/></svg>`;
+function faceId(title, sub){
+  return new Promise(resolve => {
+    const o = $('#overlay');
+    o.innerHTML = `<div class="sheet-wrap"><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sh-t">${FACE}<h3 id="sh-t">${esc(title)}</h3><p>${esc(sub)}</p><div class="stack"><button class="btn" id="sh-ok">Continuar con Face ID</button><button class="btn link" id="sh-no">Cancelar</button></div></div></div>`;
+    $('#sh-ok').focus();
+    $('#sh-ok').onclick = async () => { o.querySelector('.face').classList.add('scan'); $('#sh-ok').disabled = true; await wait(700); o.innerHTML = ''; resolve(true); };
+    $('#sh-no').onclick = () => { o.innerHTML = ''; resolve(false); };
+  });
+}
+
+/* ───────── Reglas de negocio (espejo del contrato) ───────── */
+function rollWindow(){
+  if (now() >= S.limit.windowStart + DAY) { S.limit.spent = 0; S.limit.windowStart = now(); }
+}
+function applyPendingIfDue(){
+  if (S.pending && now() >= S.pending.effectiveAt) {
+    S.limit.amount = S.pending.amount; S.pending = null;
+    log('applyPending: el nuevo límite entró en vigor tras 48 h.');
+    toast('Límite actualizado', `Tu límite diario ahora es ${usd(S.limit.amount)} USDC.`);
+  }
+}
+const total = () => Object.values(S.bal).reduce((a,b) => a + b, 0);
+const gasSponsored = () => S.server && S.quota;
+const hoursLeft = t => { const ms = Math.max(0, t - now()); const h = Math.floor(ms/3600000), m = Math.floor(ms%3600000/60000); return `${h} h ${m} min`; };
+
+/* ───────── Iconos ───────── */
+const I = {
+  send:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>',
+  recv:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>',
+  shield:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z"/></svg>',
+  home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-7 8 7v9H4z"/></svg>',
+  list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01"/></svg>',
+  link:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a5 5 0 0 0 7 0l3-3a5 5 0 0 0-7-7l-1 1M14 10a5 5 0 0 0-7 0l-3 3a5 5 0 0 0 7 7l1-1"/></svg>'
+};
+
+/* ───────── Pantallas ───────── */
+const V = {};
+
+V.welcome = () => S.lost ? `
+  <div class="grow"></div>
+  <h2 class="t">Bienvenida de nuevo</h2>
+  <p class="sub">Este es un teléfono nuevo. Si ya tenías una billetera, recupérala con tu llave de acceso sincronizada y tu respaldo.</p>
+  <div class="stack">
+    <button class="btn" data-a="recover">Recuperar mi billetera</button>
+    <button class="btn alt" data-a="reset">Crear una billetera nueva</button>
+  </div>` : `
+  <div class="grow"></div>
+  <h2 class="t" style="font-size:34px">Tu dinero digital, sin palabras que anotar</h2>
+  <p class="sub">Entras con Face ID o tu huella. Nadie, ni siquiera nosotros, puede mover tu dinero sin ti.</p>
+  <div class="stack"><button class="btn" data-a="create">Crear billetera</button></div>`;
+
+V.creating = () => `
+  <h2 class="t">Creando tu billetera</h2>
+  <p class="sub">Tu teléfono y nuestro servidor generan la llave juntos. La llave completa no existe en ningún lugar.</p>
+  <ol class="steps" id="dkg"></ol>`;
+
+V.ready = () => `
+  <h2 class="t">Tu dirección está lista</h2>
+  <p class="sub">Es la misma en Base, Arbitrum y Polygon.</p>
+  <div class="note"><span class="mono" style="word-break:break-all">${S.address}</span></div>
+  <div class="note warn"><b>Guarda tu respaldo</b>Si pierdes el teléfono, el respaldo cifrado en tu iCloud te devuelve el acceso.</div>
+  <div class="grow"></div>
+  <div class="stack">
+    <button class="btn" data-a="backup">Guardar respaldo en iCloud</button>
+    <button class="btn alt" data-a="faucet">Ahora no, recibir 250 USDC de prueba</button>
+  </div>`;
+
+V.home = () => {
+  rollWindow();
+  const chains = Object.entries(CHAINS).filter(([k]) => S.chains[k]);
+  return `
+  ${!S.backup ? `<div class="note warn"><b>Falta tu respaldo</b>Sin él, perder el teléfono puede dejarte sin acceso. <button class="btn link" style="padding:4px 0;min-height:0;display:inline;width:auto" data-a="backup">Guardarlo ahora</button></div>` : ''}
+  <div class="balance">${usd(total())} <small>USD</small></div>
+  <div style="color:var(--muted);font-size:14px">≈ COP ${nf0.format(total()*COP)}</div>
+  <button class="addr" data-a="copy" aria-label="Copiar dirección"><span class="mono">${short(S.address)}</span></button>
+  <div class="actions">
+    <button data-a="go" data-to="send">${I.send}Enviar</button>
+    <button data-a="go" data-to="receive">${I.recv}Recibir</button>
+    <button data-a="tab" data-to="security">${I.shield}Límites</button>
+  </div>
+  <div class="rows">${chains.map(([k,c]) => `<div class="row"><div><b>USDC</b><div class="k">${c.name}</div></div><div class="v">${usd(S.bal[k])}</div></div>`).join('')}</div>
+  ${total() === 0 ? `<div class="stack" style="margin-top:16px"><button class="btn alt" data-a="faucet">Recibir 250 USDC de prueba</button></div>` : ''}`;
+};
+
+V.send = () => {
+  const d = S.draft;
+  const active = Object.entries(CHAINS).filter(([k]) => S.chains[k]);
+  return `
+  <button class="back" data-a="tab" data-to="home">Volver</button>
+  <h2 class="t" style="margin-top:4px">Enviar USDC</h2>
+  <label class="f" for="to">Para</label>
+  <input class="input mono" id="to" autocomplete="off" spellcheck="false" placeholder="0x…" value="${esc(d.to)}">
+  <div class="err" id="err-to">${d.err.to ?? ''}</div>
+  <div class="seg"><button data-a="fill" data-to="${ANA}">Ana (contacto)</button><button data-a="fill" data-to="${USDC_ADDR}">Contrato de USDC</button></div>
+  <label class="f" for="amt">Monto</label>
+  <input class="big-amount" id="amt" inputmode="decimal" placeholder="0,00" value="${esc(d.amount)}">
+  <div class="k" style="color:var(--muted);font-size:13px">Disponible en ${CHAINS[d.chain].name}: ${usd(S.bal[d.chain])} USDC. Te quedan ${usd(Math.max(0, S.limit.amount - S.limit.spent))} USDC de tu límite de hoy</div>
+  <div class="err" id="err-amt">${d.err.amount ?? ''}</div>
+  <label class="f">Red</label>
+  <div class="seg" role="group" aria-label="Red">${active.map(([k,c]) => `<button aria-pressed="${d.chain===k}" data-a="chain" data-to="${k}">${c.name}</button>`).join('')}</div>
+  <div class="grow"></div>
+  <button class="btn" style="margin-top:20px" data-a="review">Revisar envío</button>`;
+};
+
+V.review = () => {
+  const d = S.draft, amt = parseAmt(d.amount);
+  const over = S.limit.spent + amt > S.limit.amount;
+  const fee = gasSponsored() ? 'Gratis, lo cubrimos nosotros' : `0,04 USDC (≈ COP ${nf0.format(0.04*COP)})`;
+  return `
+  <button class="back" data-a="go" data-to="send">Editar</button>
+  <h2 class="t" style="margin-top:4px">Revisa antes de enviar</h2>
+  <div class="rows">
+    <div class="row"><span class="k">Monto</span><span class="v">${usd(amt)} USDC<br><small style="color:var(--muted);font-weight:500">≈ COP ${nf0.format(amt*COP)}</small></span></div>
+    <div class="row"><span class="k">Para</span><span class="v mono">${short(d.to)}${d.to.toLowerCase()===ANA.toLowerCase() ? '<br><small style="font-family:var(--sans);color:var(--muted)">Ana</small>' : ''}</span></div>
+    <div class="row"><span class="k">Red</span><span class="v">${CHAINS[d.chain].name}</span></div>
+    <div class="row"><span class="k">Costo de red</span><span class="v">${fee}</span></div>
+  </div>
+  ${over ? `<div class="note warn"><b>Supera tu límite diario de ${usd(S.limit.amount)} USDC</b>Te pediremos un código además de Face ID. El contrato rechaza este envío si solo lo firma tu llave de acceso.</div>` : ''}
+  ${!gasSponsored() ? `<div class="note">${S.server ? 'Se agotó el cupo de envíos gratis de hoy.' : 'No podemos patrocinar el gas ahora.'} El costo de red se descuenta en USDC.</div>` : ''}
+  <div class="grow"></div>
+  <button class="btn" data-a="confirm">${over ? 'Continuar' : 'Confirmar con Face ID'}</button>`;
+};
+
+V.stepup = () => `
+  <button class="back" data-a="go" data-to="review">Volver</button>
+  <h2 class="t" style="margin-top:4px">Confirma que eres tú</h2>
+  <p class="sub">Enviamos un código de 6 dígitos a <b>a•••@correo.com</b>. Vence en 5 minutos y solo sirve para este envío.</p>
+  <label class="f" for="otp">Código</label>
+  <input class="input otp" id="otp" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="••••••">
+  <div class="err" id="err-otp"></div>
+  <div class="grow"></div>
+  <div class="stack">
+    <button class="btn" data-a="otp">Verificar y confirmar con Face ID</button>
+    <button class="btn link" data-a="nostep">Probar sin código (solo Face ID)</button>
+  </div>`;
+
+V.status = () => {
+  const r = S.last;
+  return `
+  <h2 class="t">${r.ok ? (r.done ? 'Enviado' : 'Enviando…') : r.title}</h2>
+  <p class="sub">${esc(r.sub)}</p>
+  <ol class="steps">${r.steps.map(s => `<li class="${s.st}">${esc(s.t)}${s.d ? `<span>${esc(s.d)}</span>` : ''}</li>`).join('')}</ol>
+  <div class="grow"></div>
+  ${r.done ? `<button class="btn" data-a="tab" data-to="home">Ir al inicio</button>` : ''}`;
+};
+
+V.receive = () => `
+  <button class="back" data-a="tab" data-to="home">Volver</button>
+  <h2 class="t" style="margin-top:4px">Recibir</h2>
+  <p class="sub">Comparte esta dirección o el código. Solo envía USDC, ETH o POL desde las redes activas.</p>
+  ${qr(S.address)}
+  <div class="note" style="text-align:center"><span class="mono" style="word-break:break-all">${S.address}</span></div>
+  <div class="seg" style="justify-content:center">${Object.entries(CHAINS).map(([k,c]) => `<span class="chip ${S.chains[k]?'on':''}">${c.name}${S.chains[k]?'':' (inactiva)'}</span>`).join('')}</div>
+  <div class="note warn" style="margin-top:14px">Si alguien te envía desde una red que no está activa, actívala en Conexiones para ver el saldo.</div>`;
+
+V.activity = () => `
+  <h2 class="t">Actividad</h2>
+  ${S.activity.length ? `<div class="rows">${S.activity.map(a => `<div class="row"><div><b>${esc(a.t)}</b><div class="k">${esc(a.d)}</div></div><div class="v" style="color:${a.ok?'inherit':'var(--bad)'}">${esc(a.v)}</div></div>`).join('')}</div>` : `<p class="list-empty">Cuando envíes o recibas dinero lo verás aquí.</p>`}`;
+
+V.security = () => {
+  rollWindow(); applyPendingIfDue();
+  const pct = Math.min(100, S.limit.spent / S.limit.amount * 100);
+  return `
+  <h2 class="t">Seguridad</h2>
+  <div class="row" style="border:0;padding-bottom:0"><b>Límite diario</b><span class="v">${usd(S.limit.amount)} USDC</span></div>
+  <div class="meter" role="meter" aria-valuemin="0" aria-valuemax="${S.limit.amount}" aria-valuenow="${S.limit.spent}" aria-label="Gastado hoy"><i style="width:${pct}%"></i></div>
+  <div class="k" style="color:var(--muted);font-size:13px">${usd(S.limit.spent)} usados hoy. Por encima pedimos un código y nuestra co-firma.</div>
+  ${S.pending ? `<div class="note warn"><b>Cambio pendiente: ${usd(S.pending.amount)} USDC</b>Entra en vigor en ${hoursLeft(S.pending.effectiveAt)}. Te avisamos por correo y notificación. <button class="btn link" style="padding:4px 0;min-height:0;width:auto;display:inline" data-a="cancelpending">Cancelar cambio</button></div>` : ''}
+  <label class="f" for="newlimit">Nuevo límite (USDC)</label>
+  <div style="display:flex;gap:8px"><input class="input" id="newlimit" inputmode="decimal" placeholder="${S.limit.amount}"><button class="btn alt" style="width:auto;padding:0 18px" data-a="setlimit">Cambiar</button></div>
+  <p class="k" style="color:var(--muted);font-size:13px;margin:6px 0 0">Bajarlo es inmediato. Subirlo tarda 48 horas, por si alguien más lo intenta.</p>
+  <div class="err" id="err-limit"></div>
+
+  <div class="rows" style="margin-top:18px">
+    <div class="row"><div><b>Respaldo</b><div class="k">${S.backup ? 'Cifrado en tu iCloud' : 'Sin guardar'}</div></div>${S.backup ? '<span class="chip on">Listo</span>' : '<button class="btn alt" style="width:auto;padding:8px 14px;min-height:40px" data-a="backup">Guardar</button>'}</div>
+    <div class="row"><div><b>Guardianes</b><div class="k">Mamá, Carlos y servicio de recuperación. Bastan 2 de 3, con 72 h de espera.</div></div><span class="chip on">2 de 3</span></div>
+    <div class="row"><div><b>Salida de emergencia</b><div class="k">Mueve todo usando tu teléfono y tu respaldo, sin nuestro servidor.</div></div><button class="btn alt" style="width:auto;padding:8px 14px;min-height:40px" data-a="go" data-to="emergency">Abrir</button></div>
+  </div>`;
+};
+
+V.emergency = () => `
+  <button class="back" data-a="tab" data-to="security">Volver</button>
+  <h2 class="t" style="margin-top:4px">Salida de emergencia</h2>
+  <p class="sub">Firma con la parte de tu teléfono y la de tu respaldo. No necesita que nuestro servidor responda; úsala si desaparecemos o no contestamos.</p>
+  ${!S.backup ? `<div class="note bad"><b>Necesitas tu respaldo</b>Guárdalo primero en Seguridad.</div>` : ''}
+  <label class="f" for="emto">Mover todo a</label>
+  <input class="input mono" id="emto" spellcheck="false" placeholder="0x…" value="${esc(S.emergencyTo)}">
+  <div class="err" id="err-em"></div>
+  <div class="grow"></div>
+  <button class="btn" data-a="emergency" ${S.backup ? '' : 'disabled'}>Mover ${usd(total())} USDC</button>`;
+
+V.connect = () => {
+  const s = S.session;
+  const chains = Object.entries(CHAINS);
+  return `
+  <h2 class="t">Conexiones</h2>
+  <b style="display:block;margin-top:6px">Apps conectadas</b>
+  ${s ? `<div class="note"><b>Mercado Andino</b>Puede gastar hasta 10 USDC en su contrato de pagos durante 1 hora. Lleva ${usd(s.spent)} USDC. Vence en ${hoursLeft(s.until)}.
+     <div class="seg" style="margin-top:10px"><button data-a="dapp" data-to="5">Pagar 5 USDC</button><button data-a="dapp" data-to="11">Pagar 11 USDC</button><button data-a="revoke">Desconectar</button></div></div>`
+   : `<div class="note"><b>Mercado Andino quiere conectarse</b>Pide gastar hasta <b style="display:inline">10 USDC</b> en su contrato de pagos durante <b style="display:inline">1 hora</b>, sin pedirte Face ID en cada compra.<div class="seg" style="margin-top:10px"><button data-a="session">Revisar y conectar</button></div></div>`}
+  <b style="display:block;margin-top:18px">Redes</b>
+  <div class="rows">${chains.map(([k,c]) => `<div class="row"><div><b>${c.name}</b><div class="k mono">${short(S.address)}</div></div>${S.chains[k] ? '<span class="chip on">Activa</span>' : `<button class="btn alt" style="width:auto;padding:8px 14px;min-height:40px" data-a="chainon" data-to="${k}">Activar</button>`}</div>`).join('')}</div>`;
+};
+
+V.recovering = () => `
+  <h2 class="t">Recuperando tu billetera</h2>
+  <p class="sub">Tu respaldo y nuestro servidor crean partes nuevas. La parte del teléfono perdido deja de servir.</p>
+  <ol class="steps" id="rec"></ol>`;
+
+V.guardians = () => {
+  const r = S.recovery;
+  const due = now() >= r.until;
+  return `
+  <h2 class="t">Recuperación con guardianes</h2>
+  <p class="sub">No encontramos tu respaldo. Mamá y Carlos aprobaron; tus fondos se moverán a una cuenta nueva cuando termine la espera de seguridad.</p>
+  <div class="rows">
+    <div class="row"><span class="k">Aprobaciones</span><span class="v">2 de 3</span></div>
+    <div class="row"><span class="k">Cuenta nueva</span><span class="v mono">${short(r.newAddress)}</span></div>
+    <div class="row"><span class="k">Se ejecuta en</span><span class="v">${due ? 'Ya puede ejecutarse' : hoursLeft(r.until)}</span></div>
+  </div>
+  <div class="note">Si aún tuvieras el teléfono anterior, verías alertas y podrías cancelar. Usa Avanzar 24 h arriba para simular la espera.</div>
+  <div class="grow"></div>
+  <button class="btn" data-a="sweep" ${due ? '' : 'disabled'}>Completar recuperación</button>`;
+};
+
+function qr(text){
+  const n = 25; let seed = 0; for (const c of text) seed = (seed * 31 + c.charCodeAt(0)) >>> 0;
+  const rnd = () => (seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296;
+  let cells = '';
+  const finder = (x,y) => `<rect x="${x}" y="${y}" width="7" height="7" fill="#000"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3" fill="#000"/>`;
+  const inF = (x,y) => (x<8&&y<8)||(x>16&&y<8)||(x<8&&y>16);
+  for (let y=0;y<n;y++) for (let x=0;x<n;x++) if (!inF(x,y) && rnd() > .5) cells += `<rect x="${x}" y="${y}" width="1" height="1"/>`;
+  return `<svg class="qr" viewBox="0 0 25 25" role="img" aria-label="Código QR de ejemplo con tu dirección" shape-rendering="crispEdges"><g fill="#000">${cells}</g>${finder(0,0)}${finder(18,0)}${finder(0,18)}</svg>`;
+}
+
+/* ───────── Render ───────── */
+const TABS = [['home','Inicio',I.home],['activity','Actividad',I.list],['security','Seguridad',I.shield],['connect','Conexiones',I.link]];
+function render(){
+  applyPendingIfDue();
+  const screen = S.screen === 'tab' ? S.tab : S.screen;
+  $('#view').innerHTML = V[screen]();
+  $('#view').scrollTop = 0;
+  const showTabs = S.screen === 'tab';
+  $('#tabs').hidden = !showTabs;
+  if (showTabs) $('#tabs').innerHTML = TABS.map(([k,l,ic]) => `<button data-a="tab" data-to="${k}" ${S.tab===k?'aria-current="page"':''}>${ic}${l}</button>`).join('');
+  renderDesk();
+  const d = new Date(now());
+  $('#clock').textContent = `Hora simulada: ${d.toLocaleDateString('es-CO',{weekday:'long', day:'numeric', month:'long'})}, ${d.toLocaleTimeString('es-CO',{hour:'2-digit',minute:'2-digit'})}`;
+  $('#st-time').textContent = d.toLocaleTimeString('es-CO',{hour:'numeric',minute:'2-digit'}).replace(/\s?[ap]\.?\s?m\.?/i,'');
+  $('#c-server').setAttribute('aria-pressed', String(!S.server));
+  $('#c-quota').setAttribute('aria-pressed', String(!S.quota));
+  ['c-time','c-lose'].forEach(id => $('#'+id).disabled = !S.created);
+}
+const go = (screen) => { S.screen = screen; render(); };
+const tab = (t) => { S.screen = 'tab'; S.tab = t; render(); };
+const parseAmt = s => { const t = String(s).trim(); const n = t.includes(',') ? t.replace(/\./g,'').replace(',','.') : t; const v = Number(n); return t && isFinite(v) ? v : NaN; };
+
+/* ───────── Flujos ───────── */
+async function create(){
+  if (!await faceId('Crear tu llave de acceso', 'Se guarda en tu teléfono y se sincroniza con tu llavero de iCloud.')) return;
+  S.shares.P = 'active'; renderDesk();
+  log('Llave de acceso creada: P-256, verificación de usuario obligatoria, extensión PRF disponible.');
+  go('creating');
+  opStart('Generación distribuida de la llave (DKG 2 de 3)');
+  const steps = [
+    ['Verificando el enclave del servidor', 'La app comprueba la attestation de Nitro y la medición PCR0 publicada.'],
+    ['Ronda 1 de 3', 'Teléfono y servidor intercambian compromisos cifrados de extremo a extremo.'],
+    ['Ronda 2 de 3', ''],
+    ['Ronda 3 de 3', 'Cada lado obtiene su parte; nadie obtiene la llave completa.'],
+    ['Protegiendo la parte del teléfono', 'Se cifra con el Secure Enclave y queda atada a Face ID.'],
+  ];
+  const ol = () => $('#dkg');
+  const draw = (i) => { if (ol()) ol().innerHTML = steps.map(([t,d],j) => `<li class="${j<i?'done':j===i?'run':''}">${t}${d&&j<=i?`<span>${d}</span>`:''}</li>`).join(''); };
+  for (let i = 0; i < steps.length; i++){
+    draw(i);
+    if (i === 1) { S.shares.D = 'active'; S.shares.S = 'active'; edges(['DS']); renderDesk(); }
+    if (i === 3) { S.shares.B = 'temp'; renderDesk(); }
+    await check(steps[i][0], 'ok', steps[i][1], i>=1 && i<=3 ? ['D','S'] : [], 520);
+  }
+  draw(steps.length);
+  S.created = true; S.address = hex(20); S.epoch = 0; S.limit.windowStart = now();
+  await check('KeyShareRecord época 0 registrado', 'ok', '3 partes activas, misma época. Ninguna tabla guarda material de llave.');
+  await check('Delegación EIP-7702 a HybridAccount + WebAuthnValidator', 'ok', 'Se incluye en la primera UserOp; la dirección ya es válida en todas las redes.', ['D','S']);
+  edges([]);
+  log(`DKG completo. Dirección ${short(S.address)} (EOA MPC).`);
+  go('ready');
+}
+
+async function backup(){
+  if (!await faceId('Cifrar tu respaldo', 'Usamos tu llave de acceso para derivar la clave que cifra el respaldo.')) return;
+  opStart('Respaldo cifrado de la parte B');
+  await check('Clave derivada de la llave de acceso', 'ok', 'HKDF(PRF(llave de acceso), "hw-backup-v1"). Nunca sale del teléfono.', ['P']);
+  await check('Parte B cifrada con AES-256-GCM', 'ok', 'Atada a tu dirección y a la época actual.');
+  await check('Subida a tu iCloud', 'ok', 'Apple solo ve texto cifrado.');
+  await check('Probar respaldo', 'ok', 'Se descargó, se descifró y se borró de memoria.');
+  S.backup = true; S.shares.B = 'active';
+  log('Respaldo guardado y verificado en iCloud.');
+  toast('Respaldo listo', 'Podrás recuperar tu billetera en otro teléfono.');
+  if (S.screen === 'ready') faucet(); else render();
+}
+
+function faucet(){
+  S.bal.base += 250;
+  S.activity.unshift({ t:'Recibiste', d:'Faucet de prueba en Base', v:'+250,00 USDC', ok:true });
+  log('Recepción: 250 USDC en Base (indexador).');
+  toast('Recibiste 250,00 USDC', 'En Base, desde el faucet de prueba.');
+  tab('home');
+}
+
+function validateSend(){
+  const d = S.draft; d.err = {};
+  const amt = parseAmt(d.amount);
+  if (!/^0x[0-9a-fA-F]{40}$/.test(d.to)) d.err.to = 'La dirección debe empezar por 0x y tener 42 caracteres.';
+  else if (d.to.toLowerCase() === USDC_ADDR.toLowerCase()) d.err.to = 'Esa es la dirección del contrato de USDC. Un envío ahí se pierde, así que lo bloqueamos.';
+  else if (d.to.toLowerCase() === S.address.toLowerCase()) d.err.to = 'Es tu propia dirección.';
+  if (!(amt > 0)) d.err.amount = 'Escribe un monto mayor que cero.';
+  else if (amt + (gasSponsored() ? 0 : 0.04) > S.bal[d.chain]) d.err.amount = `No te alcanza: tienes ${usd(S.bal[d.chain])} USDC en ${CHAINS[d.chain].name}.`;
+  return !d.err.to && !d.err.amount;
+}
+
+async function submit(withSecondFactor){
+  const d = S.draft, amt = parseAmt(d.amount);
+  rollWindow();
+  const over = S.limit.spent + amt > S.limit.amount;
+  const fee = gasSponsored() ? 0 : 0.04;
+  S.last = { ok:true, done:false, sub:`${usd(amt)} USDC a ${short(d.to)} en ${CHAINS[d.chain].name}`, steps:[
+    {t:'Firmado', st:'run'}, {t:'Enviado a la red', st:''}, {t:'Confirmado', st:''}
+  ]};
+  go('status');
+  const step = (i, st, dd) => { S.last.steps[i].st = st; if (dd) S.last.steps[i].d = dd; if (S.screen==='status') render(); };
+
+  opStart(`Enviar ${usd(amt)} USDC`);
+  await check('Simulación de la UserOperation', 'ok', `Saldo esperado: −${usd(amt)} USDC. Sin aprobaciones ni llamadas extra.`);
+  await check(gasSponsored() ? 'Gas patrocinado por HybridPaymaster' : 'Gas pagado en USDC (paymaster ERC-20)', gasSponsored() ? 'ok' : 'skip', gasSponsored() ? 'Firma del backend sobre la UserOp, válida 2 min.' : 'Costo visible antes de confirmar: 0,04 USDC.');
+  await check('Validador elegido por la nonce key', 'ok', 'Los 20 bytes altos apuntan a WebAuthnValidator.');
+  await check('Firma de la llave de acceso', 'ok', 'P-256 con precompile RIP-7212; challenge = userOpHash; UV = 1; s bajo.', ['P']);
+
+  if (withSecondFactor){
+    if (!S.server){
+      await check('Co-firma MPC del servidor', 'fail', 'El servidor no responde. Sin su parte no hay firma compuesta.', ['D']);
+      step(0,'fail','Falta la co-firma del servidor');
+      S.last = { ...S.last, ok:false, done:true, title:'No se pudo enviar', sub:`Puedes enviar hasta ${usd(Math.max(0,S.limit.amount-S.limit.spent))} USDC hoy solo con Face ID, o usar la salida de emergencia para mover todo.` };
+      log('Co-firma rechazada: servidor sin conexión.');
+      return render();
+    }
+    await check('Segundo factor ligado a este hash', 'ok', 'stepUpToken de un solo uso, vence en 5 min, firmado para este userOpHash.');
+    edges(['DS','P']);
+    await check('Co-firma MPC: teléfono + servidor', 'ok', 'DKLs23, 2 rondas. El enclave recalculó el hash y verificó tu Face ID antes de participar.', ['D','S'], 700);
+  }
+  step(0,'done', withSecondFactor ? 'Llave de acceso + co-firma MPC' : 'Llave de acceso');
+  step(1,'run');
+  await check('Bundler acepta la UserOperation', 'ok', 'EntryPoint v0.8. Hay un segundo bundler de respaldo.');
+
+  if (over && !withSecondFactor){
+    await check('SpendingPolicyHook revisa el límite', 'fail', `Revierte con LimitExceeded(${S.limit.amount}, ${S.limit.spent + amt}). La operación entró al bloque pero no movió fondos.`, ['P']);
+    edges([]);
+    step(1,'done'); step(2,'fail','El contrato rechazó el envío');
+    S.last = { ...S.last, ok:false, done:true, title:'El contrato rechazó el envío', sub:'Superaba tu límite diario y solo lo firmó tu llave de acceso. Tus fondos no se movieron.' };
+    S.activity.unshift({ t:'Envío rechazado', d:`Superaba el límite, ${CHAINS[d.chain].name}`, v:`${usd(amt)} USDC`, ok:false });
+    log(`Hook rechazó ${usd(amt)} USDC con passkey sola (límite ${S.limit.amount}).`);
+    return render();
+  }
+  await check('SpendingPolicyHook revisa el límite', 'ok', over ? `Supera el límite, pero hay firma compuesta (nivel ${withSecondFactor ? 'COMPOSITE' : 'PASSKEY'}).` : `${usd(S.limit.spent + amt)} de ${usd(S.limit.amount)} USDC usados hoy.`, withSecondFactor ? ['P','D','S'] : ['P']);
+  step(1,'done');
+  step(2,'run');
+  const block = 18_420_000 + Math.floor(Math.random()*9999);
+  await check(`Incluida en el bloque ${nf0.format(block)}`, 'ok', `${(2 + Math.random()*3).toFixed(1).replace('.',',')} s desde tu aprobación.`, [], 800);
+  edges([]);
+  S.bal[d.chain] -= amt + fee; S.limit.spent += amt;
+  step(2,'done', `Bloque ${nf0.format(block)}`);
+  S.last.done = true;
+  S.activity.unshift({ t:'Enviaste', d:`A ${short(d.to)}, ${CHAINS[d.chain].name}`, v:`−${usd(amt)} USDC`, ok:true });
+  log(`Enviado ${usd(amt)} USDC (${withSecondFactor ? 'passkey + MPC' : 'passkey'}).`);
+  toast('Envío confirmado', `${usd(amt)} USDC llegaron a ${short(d.to)}.`);
+  S.draft = { to:'', amount:'', chain:d.chain, err:{} };
+  render();
+}
+
+async function setLimit(){
+  const v = parseAmt($('#newlimit').value);
+  const err = $('#err-limit');
+  if (!(v > 0)) { err.textContent = 'Escribe un monto mayor que cero.'; return; }
+  if (v === S.limit.amount) { err.textContent = 'Ese ya es tu límite.'; return; }
+  if (v < S.limit.amount){
+    if (!await faceId('Bajar tu límite', `Nuevo límite diario: ${usd(v)} USDC.`)) return;
+    opStart(`Bajar el límite a ${usd(v)} USDC`);
+    await check('Firma de la llave de acceso', 'ok', '', ['P']);
+    await check('HybridAccount permite setLimit con llave de acceso', 'ok', 'Es un selector que solo endurece; no necesita la llave MPC.', ['P']);
+    await check('SpendingPolicyHook.setLimit', 'ok', 'Efecto inmediato. Se cancela cualquier aumento pendiente.');
+    S.limit.amount = v; S.pending = null;
+    log(`Límite bajado a ${usd(v)} USDC (inmediato).`);
+    return render();
+  }
+  if (!S.server){ err.textContent = 'Subir el límite necesita nuestra co-firma y el servidor no responde ahora.'; return; }
+  if (!await faceId('Subir tu límite', `Nuevo límite diario: ${usd(v)} USDC, efectivo en 48 horas.`)) return;
+  opStart(`Proponer límite de ${usd(v)} USDC`);
+  await check('Con llave de acceso sola: rechazado', 'skip', 'proposeLimit no está entre los selectores que solo endurecen.', ['P']);
+  edges(['DS']);
+  await check('Firma MPC: teléfono + servidor', 'ok', 'El servidor exige código y avisa por todos los canales.', ['D','S'], 650);
+  await check('SpendingPolicyHook.proposeLimit', 'ok', 'effectiveAt = ahora + 48 h. Antes de eso no tiene efecto.');
+  edges([]);
+  S.pending = { amount:v, effectiveAt: now() + 48*3600000 };
+  log(`Aumento a ${usd(v)} USDC propuesto; efectivo en 48 h.`);
+  toast('Cambio de límite solicitado', `Si no fuiste tú, cancélalo en Seguridad. Entra en vigor en 48 h.`);
+  render();
+}
+
+async function cancelPending(){
+  if (!await faceId('Cancelar el cambio', 'Tu límite se queda como está.')) return;
+  opStart('Cancelar cambio pendiente');
+  await check('cancelPending con llave de acceso', 'ok', 'Cancelar siempre endurece; no requiere la llave MPC.', ['P']);
+  S.pending = null; log('Cambio de límite cancelado.'); render();
+}
+
+async function emergency(){
+  const to = $('#emto').value.trim(); S.emergencyTo = to;
+  if (!/^0x[0-9a-fA-F]{40}$/.test(to)) { $('#err-em').textContent = 'Escribe una dirección válida que controles.'; return; }
+  if (!await faceId('Salida de emergencia', 'Vamos a descargar y descifrar tu respaldo en este teléfono.')) return;
+  opStart('Salida de emergencia: teléfono + respaldo');
+  await check('Respaldo descargado de iCloud y descifrado', 'ok', 'Con la clave derivada de tu llave de acceso.', ['P']);
+  edges(['DB']);
+  await check('Firma MPC local: teléfono + respaldo', 'ok', 'Dos contextos aislados en el teléfono. El servidor no participa.', ['D','B'], 800);
+  await check('Transacción tipo 4 enviada directamente', 'ok', 'Sin bundler ni paymaster: el EOA paga su propio gas.');
+  await check('Parte B borrada de memoria', 'ok', 'Zeroize tras firmar.');
+  edges([]);
+  const moved = total(); Object.keys(S.bal).forEach(k => S.bal[k] = 0);
+  S.activity.unshift({ t:'Salida de emergencia', d:`A ${short(to)}`, v:`−${usd(moved)} USDC`, ok:true });
+  log(`Salida de emergencia: ${usd(moved)} USDC movidos sin el servidor.`);
+  toast('Fondos movidos', `${usd(moved)} USDC enviados a ${short(to)}.`);
+  tab('home');
+}
+
+async function session(){
+  if (!S.server){ toast('No se pudo conectar', 'Instalar permisos necesita nuestra co-firma y el servidor no responde.'); return; }
+  if (!await faceId('Conectar Mercado Andino', 'Hasta 10 USDC en su contrato de pagos durante 1 hora.')) return;
+  opStart('Instalar session key de Mercado Andino');
+  await check('Permisos legibles mostrados al usuario', 'ok', 'Contrato destino, selector transfer, máximo 10 USDC, vence en 1 h.');
+  edges(['DS']);
+  await check('Co-firma MPC para enableSession', 'ok', 'Instalar permisos toca un módulo: requiere la llave MPC. Sin código porque los límites son acotados.', ['D','S'], 650);
+  edges([]);
+  S.session = { spent:0, until: now() + 3600000 };
+  log('Session key instalada para Mercado Andino (10 USDC, 1 h).');
+  render();
+}
+
+async function dapp(amount){
+  const s = S.session;
+  opStart(`Mercado Andino cobra ${usd(amount)} USDC`);
+  await check('Validador elegido: SessionKeyValidator', 'ok', 'Firma la llave temporal de la app, no tu llave de acceso.');
+  if (now() > s.until){
+    await check('Vigencia', 'fail', 'La session key venció. Se rechaza en validación.');
+    return log('Cobro rechazado: session key vencida.');
+  }
+  if (s.spent + amount > 10){
+    await check('Permisos de la session key', 'fail', `maxAmount 10 USDC; pediría ${usd(s.spent + amount)}. Rechazada en validación, no se cobró gas.`);
+    log(`Cobro de ${usd(amount)} USDC rechazado: fuera de los permisos.`);
+    toast('Mercado Andino pidió más de lo permitido', 'El contrato lo rechazó. No se movió dinero.');
+    return;
+  }
+  await check('Permisos de la session key', 'ok', `${usd(s.spent + amount)} de 10 USDC usados.`);
+  await check('SpendingPolicyHook revisa el límite', 'ok', 'También cuenta para tu límite diario.');
+  s.spent += amount; S.bal.base -= amount; S.limit.spent += amount;
+  S.activity.unshift({ t:'Pagaste a Mercado Andino', d:'Session key en Base', v:`−${usd(amount)} USDC`, ok:true });
+  log(`Mercado Andino cobró ${usd(amount)} USDC con session key.`);
+  render();
+}
+
+async function revoke(){
+  if (!await faceId('Desconectar Mercado Andino', 'La app pierde sus permisos de inmediato.')) return;
+  opStart('Revocar session key');
+  await check('revokeSession con llave de acceso', 'ok', 'Revocar solo endurece; no requiere la llave MPC.', ['P']);
+  await check('Invalida desde la siguiente UserOperation', 'ok', '');
+  S.session = null; log('Session key revocada.'); render();
+}
+
+async function chainOn(k){
+  if (!S.server){ toast('No se pudo activar', 'La autorización de red necesita nuestra co-firma.'); return; }
+  if (!await faceId(`Activar ${CHAINS[k].name}`, 'Firmamos la autorización para esa red y copiamos tu configuración.')) return;
+  opStart(`Activar ${CHAINS[k].name}`);
+  edges(['DS']);
+  await check(`Autorización EIP-7702 para chainId ${CHAINS[k].id}`, 'ok', 'La firma la llave MPC: es la llave raíz del EOA.', ['D','S'], 650);
+  edges([]);
+  await check('Módulos replicados', 'ok', 'WebAuthnValidator, límites y guardianes, en las mismas direcciones gracias a CREATE2.');
+  await check('Misma dirección', 'ok', S.address);
+  S.chains[k] = true;
+  log(`${CHAINS[k].name} activada con la misma dirección.`);
+  render();
+}
+
+async function recover(){
+  if (!await faceId('Usar tu llave de acceso', 'Está sincronizada en tu llavero de iCloud.')) return;
+  S.shares.P = 'active';
+  if (!S.backup){
+    opStart('Recuperación sin respaldo');
+    await check('Buscar respaldo en iCloud', 'fail', 'No hay respaldo. Con solo la parte del servidor no se puede firmar.');
+    await check('GuardianRecovery: 2 de 3 aprobaciones', 'ok', 'Mamá y Carlos firmaron. Comienza la espera de 72 h, cancelable por el titular.');
+    S.recovery = { until: now() + 72*3600000, newAddress: hex(20) };
+    log('Recuperación por guardianes iniciada: barrido a cuenta nueva tras 72 h.');
+    return go('guardians');
+  }
+  go('recovering');
+  opStart('Recuperación: respaldo + servidor (resharing)');
+  const steps = [
+    ['Descargando tu respaldo de iCloud', 'Se descifra con tu llave de acceso sincronizada.', ['P']],
+    ['Verificando el enclave del servidor', 'Attestation y PCR0, igual que al crearla.', []],
+    ['Generando partes nuevas', 'Respaldo + servidor ejecutan el resharing DKLs23. La dirección no cambia.', ['B','S']],
+    ['Invalidando la parte del teléfono perdido', 'Las partes de épocas distintas no se combinan.', []],
+  ];
+  const draw = (i) => { const ol = $('#rec'); if (ol) ol.innerHTML = steps.map(([t,d],j) => `<li class="${j<i?'done':j===i?'run':''}">${t}${j<=i?`<span>${d}</span>`:''}</li>`).join(''); };
+  for (let i = 0; i < steps.length; i++){
+    draw(i);
+    if (i === 2) edges(['BS']);
+    if (i === 3) { S.epoch += 1; S.shares.D = 'active'; S.shares.B = 'active'; edges([]); renderDesk(); }
+    await check(steps[i][0], 'ok', steps[i][1], steps[i][2], 650);
+  }
+  draw(steps.length);
+  await check(`KeyShareRecord época ${S.epoch}`, 'ok', `Las 3 partes de la época ${S.epoch - 1} quedan superseded.`);
+  S.lost = false;
+  log(`Recuperación completa. Misma dirección, época ${S.epoch}. La parte del teléfono perdido ya no sirve.`);
+  toast('Billetera recuperada', 'Te avisamos por correo en caso de que no hayas sido tú.');
+  tab('home');
+}
+
+async function sweep(){
+  const r = S.recovery;
+  opStart('GuardianRecovery.execute: barrido a cuenta nueva');
+  await check('Espera de 72 h cumplida y sin cancelación', 'ok', 'executeAfter ≤ tiempo del bloque.');
+  await check('Executor mueve todos los activos', 'ok', `Destino ${short(r.newAddress)}. La llave vieja puede estar comprometida, por eso se migra (research R5).`);
+  edges(['DS']);
+  await check('DKG de la cuenta nueva', 'ok', 'Partes nuevas para teléfono y servidor; respáldala esta vez.', ['D','S']);
+  edges([]);
+  S.address = r.newAddress; S.epoch = 0; S.backup = false; S.shares = { D:'active', S:'active', B:'temp', P:'active' };
+  S.lost = false; S.recovery = null;
+  S.activity.unshift({ t:'Recuperación con guardianes', d:'Fondos movidos a tu cuenta nueva', v:'Completa', ok:true });
+  log('Barrido completo: fondos en la cuenta nueva.');
+  tab('home');
+}
+
+/* ───────── Eventos ───────── */
+$('#view').addEventListener('input', e => {
+  if (e.target.id === 'to') S.draft.to = e.target.value.trim();
+  if (e.target.id === 'amt') S.draft.amount = e.target.value;
+  if (e.target.id === 'emto') S.emergencyTo = e.target.value.trim();
+});
+
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-a]'); if (!b || b.disabled) return;
+  const a = b.dataset.a, to = b.dataset.to;
+  switch (a){
+    case 'create': return create();
+    case 'backup': return backup();
+    case 'faucet': return faucet();
+    case 'tab': return tab(to);
+    case 'go': return go(to);
+    case 'copy': toast('Dirección copiada', S.address); return;
+    case 'fill': S.draft.to = to; return render();
+    case 'chain': S.draft.chain = to; return render();
+    case 'review': return validateSend() ? go('review') : render();
+    case 'confirm': {
+      const amt = parseAmt(S.draft.amount);
+      if (S.limit.spent + amt > S.limit.amount){
+        S.otp = String(Math.floor(100000 + Math.random()*900000));
+        go('stepup');
+        setTimeout(() => toast('Correo: tu código de confirmación', `${S.otp.slice(0,3)} ${S.otp.slice(3)}. No lo compartas con nadie.`), 600);
+        return;
+      }
+      if (await faceId('Confirmar envío', `${usd(amt)} USDC a ${short(S.draft.to)}`)) submit(false);
+      return;
+    }
+    case 'otp': {
+      const v = $('#otp').value.replace(/\D/g,'');
+      if (v !== S.otp){ $('#err-otp').textContent = 'El código no coincide. Revisa el correo más reciente.'; return; }
+      if (await faceId('Confirmar envío', `${usd(parseAmt(S.draft.amount))} USDC a ${short(S.draft.to)}`)) submit(true);
+      return;
+    }
+    case 'nostep':
+      if (await faceId('Confirmar envío', 'Solo con tu llave de acceso.')) submit(false);
+      return;
+    case 'setlimit': return setLimit();
+    case 'cancelpending': return cancelPending();
+    case 'emergency': return emergency();
+    case 'session': return session();
+    case 'dapp': return dapp(Number(to));
+    case 'revoke': return revoke();
+    case 'chainon': return chainOn(to);
+    case 'recover': return recover();
+    case 'sweep': return sweep();
+    case 'reset': return reset();
+  }
+});
+
+function reset(){ S = fresh(); logItems = []; $('#log').innerHTML = ''; op = null; $('#checks').innerHTML=''; $('#op-title').textContent='Aún no hay operaciones'; $('#op-hash').textContent=''; $('#op-idle').hidden=false; edges([]); render(); }
+
+$('#c-server').onclick = () => { S.server = !S.server; log(S.server ? 'Servidor de nuevo en línea.' : 'Servidor sin respuesta: la parte S no está disponible.'); render(); };
+$('#c-quota').onclick = () => { S.quota = !S.quota; log(S.quota ? 'Cupo de patrocinio restablecido.' : 'Cupo de patrocinio agotado: gas en USDC.'); render(); };
+$('#c-time').onclick = () => { S.offset += DAY; log('Pasaron 24 h.'); render(); };
+$('#c-lose').onclick = () => {
+  if (!S.created || S.lost) return;
+  S.lost = true; S.shares.D = 'dead'; S.screen = 'welcome';
+  log('Teléfono perdido. Se abre la app en un teléfono nuevo.');
+  render();
+};
+$('#c-reset').onclick = reset;
+
+render();
+log('Listo. Empieza con Crear billetera.');
+})();
+</script>
+</body>
+</html>

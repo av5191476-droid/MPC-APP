@@ -1,0 +1,26 @@
+[package]
+name = "hw-mpc"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+
+[lib]
+crate-type = ["staticlib", "cdylib", "lib"]
+
+[features]
+default = []
+# Activa el adaptador sobre la biblioteca DKLs23 auditada (research R2).
+dkls23 = []
+
+[dependencies]
+uniffi = "0.28"
+zeroize = { version = "1.8", features = ["derive"] }
+thiserror = "1"
+# Al fijar la versión auditada:
+# dkls23 = { git = "https://github.com/silence-laboratories/dkls23", rev = "<commit auditado>" }
+# Verificación de attestation Nitro (COSE_Sign1 ES384 + cadena hasta la raíz AWS Nitro G1):
+# aws-nitro-enclaves-cose = "0.5"
+# x509-cert = "0.2"
+
+[build-dependencies]
+uniffi = { version = "0.28", features = ["build"] }

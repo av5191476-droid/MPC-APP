@@ -1,0 +1,8 @@
+{
+  "cli": { "version": ">= 13.0.0" },
+  "build": {
+    "development": { "developmentClient": true, "distribution": "internal", "env": { "EXPO_PUBLIC_CHAIN_ID": "84532" } },
+    "beta": { "distribution": "internal", "env": { "EXPO_PUBLIC_CHAIN_ID": "84532" } },
+    "production": { "autoIncrement": true, "env": { "EXPO_PUBLIC_CHAIN_ID": "8453" } }
+  }
+}

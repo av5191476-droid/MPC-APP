@@ -1,0 +1,11 @@
+[package]
+name = "enclave-signer"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+
+[dependencies]
+zeroize = { version = "1.8", features = ["derive"] }
+thiserror = "1"
+# La implementación DKLs23 auditada se añade aquí al fijarla (research R2), p. ej.:
+# dkls23 = { git = "https://github.com/silence-laboratories/dkls23", rev = "<commit auditado>" }
